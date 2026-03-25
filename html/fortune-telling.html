@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测测 - 星座占星</title>
+    <!-- 引入 Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入 Flatpickr 日期选择器 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <!-- 引入自定义 CSS -->
+    <link rel="stylesheet" href="../css/fortune-telling.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="../config.html" class="config-link">⚙️ 配置 API</a>
+            <h1>✨ 星座占星</h1>
+            <p>探索你的星盘,解读命运密码</p>
+        </div>
+
+        <!-- 表单区域 -->
+        <div class="form-section" id="formSection">
+            <div class="form-group">
+                <label>昵称</label>
+                <input type="text" id="name" placeholder="请输入您的昵称">
+            </div>
+
+            <div class="form-group">
+                <label>性别</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="gender" value="male" checked>
+                        <div class="gender-card">
+                            <i class="fas fa-mars icon"></i>
+                            <span>男</span>
+                        </div>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="gender" value="female">
+                        <div class="gender-card">
+                            <i class="fas fa-venus icon"></i>
+                            <span>女</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>出生日期（阳历）</label>
+                <input type="text" id="birthdate" placeholder="选择出生日期" readonly style="cursor: pointer;">
+            </div>
+
+            <div class="form-group">
+                <label>出生时间（UTC+8）</label>
+                <input type="text" id="birthtime" placeholder="选择出生时间" readonly style="cursor: pointer;">
+            </div>
+
+            <div class="form-group">
+                <label>出生地点</label>
+                <input type="text" id="cityInput" class="td-cascader-input" placeholder="请选择省/市/区" readonly>
+            </div>
+
+            <button class="submit-btn" onclick="calculateChart()">✨ 开始解读</button>
+        </div>
+
+        <!-- 加载动画 -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在计算您的星盘...</p>
+        </div>
+
+        <!-- 结果区域 -->
+        <div class="result-section" id="resultSection">
+            <div class="user-info">
+                <h2 id="resultName"></h2>
+                <p id="resultLocation"></p>
+            </div>
+
+            <!-- 个性化短语 -->
+            <div class="quote-section">
+                <div class="summary" id="personalQuote"></div>
+                <div class="advice" id="dailyAdvice"></div>
+            </div>
+
+            <!-- 首饰推荐 -->
+            <div class="jewelry-card">
+                <img src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=400&fit=crop" alt="星月石项链" class="jewelry-image">
+                <div class="jewelry-info">
+                    <div class="jewelry-name">✨ 星月石项链</div>
+                    <div class="jewelry-meaning">星月石象征智慧与直觉,能增强感知力,平衡情绪,带来内心平静与灵性启迪</div>
+                </div>
+            </div>
+
+            <div class="chart-grid">
+                <!-- 太阳星座 -->
+                <div class="chart-card">
+                    <div class="icon">☀️</div>
+                    <div class="planet-zodiac-name" id="sunZodiacName"></div>
+                    <div class="trait" id="sunTrait"></div>
+                </div>
+
+                <!-- 月亮星座 -->
+                <div class="chart-card">
+                    <div class="icon">🌙</div>
+                    <div class="planet-zodiac-name" id="moonZodiacName"></div>
+                    <div class="trait" id="moonTrait"></div>
+                </div>
+
+                <!-- 上升星座 -->
+                <div class="chart-card">
+                    <div class="icon">⬆️</div>
+                    <div class="planet-zodiac-name" id="ascendantZodiacName"></div>
+                    <div class="trait" id="ascendantTrait"></div>
+                </div>
+
+                <!-- 金星星座 -->
+                <div class="chart-card">
+                    <div class="icon">♀️</div>
+                    <div class="planet-zodiac-name" id="venusZodiacName"></div>
+                    <div class="trait" id="venusTrait"></div>
+                </div>
+
+                <!-- 火星星座 -->
+                <div class="chart-card">
+                    <div class="icon">♂️</div>
+                    <div class="planet-zodiac-name" id="marsZodiacName"></div>
+                    <div class="trait" id="marsTrait"></div>
+                </div>
+
+                <!-- 水星星座 -->
+                <div class="chart-card">
+                    <div class="icon">☿️</div>
+                    <div class="planet-zodiac-name" id="mercuryZodiacName"></div>
+                    <div class="trait" id="mercuryTrait"></div>
+                </div>
+            </div>
+
+            <!-- 详细分析 -->
+            <div class="analysis-card">
+                <h3>📊 星盘详细分析</h3>
+                <div class="analysis-item">
+                    <div class="analysis-label">整体性格特征</div>
+                    <div class="analysis-text" id="analysisPersonality"></div>
+                </div>
+                <div class="analysis-item">
+                    <div class="analysis-label">事业发展</div>
+                    <div class="analysis-text" id="analysisCareer"></div>
+                </div>
+                <div class="analysis-item">
+                    <div class="analysis-label">爱情婚姻</div>
+                    <div class="analysis-text" id="analysisMarriage"></div>
+                </div>
+                <div class="analysis-item">
+                    <div class="analysis-label">财富潜质</div>
+                    <div class="analysis-text" id="analysisWealth"></div>
+                </div>
+                <div class="analysis-item">
+                    <div class="analysis-label">天赋潜能</div>
+                    <div class="analysis-text" id="analysisTalent"></div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="reset-btn" onclick="recalculate()">再算一次</button>
+                <button class="refill-btn" onclick="resetForm()">重新填写</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入城市数据 -->
+    <script src="../data/city-data.js"></script>
+    <!-- 引入 Astronomy Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.13/astronomy.browser.js"></script>
+    <!-- 引入 Flatpickr 日期选择器 -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
+    <!-- 引入自定义 JavaScript -->
+    <script src="../js/fortune-telling.js"></script>
+</body>
+</html>
