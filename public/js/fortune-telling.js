@@ -17,149 +17,6 @@ const PLANET_NAMES = {
     mars: '火星'
 };
 
-// 星体-星座特征词映射表 (12星座 × 6星体)
-const TRAIT_MAP = {
-    sun: {
-        '白羊座': '热情勇敢', '金牛座': '稳重踏实', '双子座': '机智灵动',
-        '巨蟹座': '温柔体贴', '狮子座': '自信霸气', '处女座': '追求完美',
-        '天秤座': '优雅和谐', '天蝎座': '执着到底', '射手座': '自由奔放',
-        '摩羯座': '坚韧不拔', '水瓶座': '独立创新', '双鱼座': '富有同情心'
-    },
-    moon: {
-        '白羊座': '情绪热烈', '金牛座': '情感稳定', '双子座': '思维敏捷',
-        '巨蟹座': '情感细腻', '狮子座': '渴望认可', '处女座': '注重细节',
-        '天秤座': '寻求平衡', '天蝎座': '情感深沉', '射手座': '乐观向上',
-        '摩羯座': '情感克制', '水瓶座': '理性独立', '双鱼座': '梦幻敏感'
-    },
-    ascendant: {
-        '白羊座': '行动迅速', '金牛座': '稳重可靠', '双子座': '善于表达',
-        '巨蟹座': '关怀备至', '狮子座': '魅力四射', '处女座': '做事细致',
-        '天秤座': '平易近人', '天蝎座': '神秘深沉', '射手座': '开朗大方',
-        '摩羯座': '成熟稳重', '水瓶座': '独特个性', '双鱼座': '富有想象力'
-    },
-    mercury: {
-        '白羊座': '思维敏捷', '金牛座': '稳重理性', '双子座': '口才出众',
-        '巨蟹座': '情感表达', '狮子座': '自信表达', '处女座': '细致分析',
-        '天秤座': '善于沟通', '天蝎座': '深刻洞察', '射手座': '乐观思维',
-        '摩羯座': '逻辑清晰', '水瓶座': '创新思维', '双鱼座': '富有想象'
-    },
-    venus: {
-        '白羊座': '直率热情', '金牛座': '享受物质', '双子座': '喜欢交流',
-        '巨蟹座': '重视家庭', '狮子座': '浪漫炫耀', '处女座': '注重品质',
-        '天秤座': '追求美感', '天蝎座': '情感投入', '射手座': '自由恋爱',
-        '摩羯座': '认真负责', '水瓶座': '思想开放', '双鱼座': '浪漫幻想'
-    },
-    mars: {
-        '白羊座': '勇往直前', '金牛座': '稳健行动', '双子座': '灵活应变',
-        '巨蟹座': '守护家园', '狮子座': '积极主动', '处女座': '细致规划',
-        '天秤座': '协调合作', '天蝎座': '精准出击', '射手座': '冒险精神',
-        '摩羯座': '循序渐进', '水瓶座': '创新突破', '双鱼座': '直觉驱动'
-    }
-};
-
-// 星体-星座-矿石映射表
-const STONE_MAP = {
-    sun: {
-        '白羊座': '红宝石', '金牛座': '黄水晶', '双子座': '玛瑙',
-        '巨蟹座': '珍珠', '狮子座': '太阳石', '处女座': '橄榄石',
-        '天秤座': '粉晶', '天蝎座': '黑曜石', '射手座': '紫水晶',
-        '摩羯座': '石榴石', '水瓶座': '海蓝宝', '双鱼座': '月光石'
-    },
-    moon: {
-        '白羊座': '石榴石', '金牛座': '绿松石', '双子座': '蛋白石',
-        '巨蟹座': '月光石', '狮子座': '琥珀', '处女座': '翡翠',
-        '天秤座': '玫瑰石英', '天蝎座': '黑玛瑙', '射手座': '青金石',
-        '摩羯座': '黑曜石', '水瓶座': '天河石', '双鱼座': '海蓝宝'
-    },
-    ascendant: {
-        '白羊座': '红玉髓', '金牛座': '虎眼石', '双子座': '碧玺',
-        '巨蟹座': '珍珠母', '狮子座': '金色石英', '处女座': '绿幽灵',
-        '天秤座': '蛋白石', '天蝎座': '黑金砂', '射手座': '黄水晶',
-        '摩羯座': '黑电气石', '水瓶座': '拉长石', '双鱼座': '紫锂辉'
-    },
-    venus: {
-        '白羊座': '珊瑚', '金牛座': '粉红碧玺', '双子座': '青金石',
-        '巨蟹座': '粉红蛋白石', '狮子座': '帝王托帕石', '处女座': '蓝纹玛瑙',
-        '天秤座': '摩根石', '天蝎座': '石榴石', '射手座': '黄玉',
-        '摩羯座': '烟水晶', '水瓶座': '欧泊', '双鱼座': '紫水晶'
-    },
-    mars: {
-        '白羊座': '血石', '金牛座': '红玛瑙', '双子座': '红玉髓',
-        '巨蟹座': '火欧泊', '狮子座': '红碧玺', '处女座': '红纹石',
-        '天秤座': '红发晶', '天蝎座': '石榴石', '射手座': '托帕石',
-        '摩羯座': '赤铁矿', '水瓶座': '锂辉石', '双鱼座': '紫发晶'
-    }
-};
-
-// 个性化短语模板
-const QUOTE_TEMPLATES = [
-    '{planet}赋予你{trait}的品格',
-    '你的{planet}带来{trait}的力量',
-    '{planet}让你展现出{trait}的特质',
-    '星盘中的{planet}昭示着你{trait}的本质',
-    '{planet}为你点亮{trait}的人生篇章'
-];
-
-// 首饰图片映射
-const JEWELRY_IMAGE_MAP = {
-    "红宝石": "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop",
-    "黄水晶": "https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=400&h=400&fit=crop",
-    "玛瑙": "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=400&fit=crop",
-    "珍珠": "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=400&fit=crop",
-    "太阳石": "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop",
-    "橄榄石": "https://images.unsplash.com/photo-1579656381225-b5df4b06b935?w=400&h=400&fit=crop",
-    "粉晶": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "黑曜石": "https://images.unsplash.com/photo-1606349976136-8bf895392620?w=400&h=400&fit=crop",
-    "紫水晶": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "石榴石": "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&h=400&fit=crop",
-    "海蓝宝": "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=400&fit=crop",
-    "月光石": "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop",
-    "绿松石": "https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=400&h=400&fit=crop",
-    "蛋白石": "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop",
-    "琥珀": "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop",
-    "翡翠": "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&h=400&fit=crop",
-    "玫瑰石英": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "黑玛瑙": "https://images.unsplash.com/photo-1606349976136-8bf895392620?w=400&h=400&fit=crop",
-    "青金石": "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=400&fit=crop",
-    "天河石": "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop",
-    "红玉髓": "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&h=400&fit=crop",
-    "虎眼石": "https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=400&h=400&fit=crop",
-    "碧玺": "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop",
-    "珍珠母": "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=400&fit=crop",
-    "金色石英": "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&h=400&fit=crop",
-    "绿幽灵": "https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=400&h=400&fit=crop",
-    "黑金砂": "https://images.unsplash.com/photo-1606349976136-8bf895392620?w=400&h=400&fit=crop",
-    "黄玉": "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&h=400&fit=crop",
-    "黑电气石": "https://images.unsplash.com/photo-1606349976136-8bf895392620?w=400&h=400&fit=crop",
-    "拉长石": "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop",
-    "紫锂辉": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "珊瑚": "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop",
-    "粉红碧玺": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "粉红蛋白石": "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop",
-    "帝王托帕石": "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&h=400&fit=crop",
-    "蓝纹玛瑙": "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=400&fit=crop",
-    "摩根石": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "烟水晶": "https://images.unsplash.com/photo-1606349976136-8bf895392620?w=400&h=400&fit=crop",
-    "欧泊": "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop",
-    "血石": "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&h=400&fit=crop",
-    "红玛瑙": "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop",
-    "红玉髓": "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&h=400&fit=crop",
-    "火欧泊": "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop",
-    "红碧玺": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "红纹石": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "红发晶": "https://images.unsplash.com/photo-1606349976136-8bf895392620?w=400&h=400&fit=crop",
-    "托帕石": "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&h=400&fit=crop",
-    "赤铁矿": "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&h=400&fit=crop",
-    "锂辉石": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "紫发晶": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "星月石": "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop",
-    "星月石项链": "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop",
-    "月光石吊坠": "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop",
-    "紫水晶手链": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "粉晶项链": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    "黑曜石挂饰": "https://images.unsplash.com/photo-1606349976136-8bf895392620?w=400&h=400&fit=crop"
-};
-
 // ========================================
 // 工具函数
 // ========================================
@@ -252,13 +109,13 @@ function calculateAscendant(birthDateTime, latitude, longitude) {
 
         // 计算上升点的黄道经度
         const ramcDeg = ramc * 15;
-        const tanAsc = Math.sin(Astronomy.DegToRad(ramcDeg)) /
-                      (Math.cos(Astronomy.DegToRad(ramcDeg)) *
-                       Math.cos(Astronomy.DegToRad(obliquity)) +
-                       Math.tan(Astronomy.DegToRad(latitude)) *
-                       Math.sin(Astronomy.DegToRad(obliquity)));
+        const tanAsc = Math.sin(ramcDeg * Astronomy.DEG2RAD) /
+                      (Math.cos(ramcDeg * Astronomy.DEG2RAD) *
+                       Math.cos(obliquity * Astronomy.DEG2RAD) +
+                       Math.tan(latitude * Astronomy.DEG2RAD) *
+                       Math.sin(obliquity * Astronomy.DEG2RAD));
 
-        const ascendantEclipticLongitude = Astronomy.RadToDeg(Math.atan(tanAsc));
+        const ascendantEclipticLongitude = Math.atan(tanAsc) * Astronomy.RAD2DEG;
 
         return longitudeToZodiac(ascendantEclipticLongitude);
     } catch (error) {
@@ -359,7 +216,7 @@ function calculateNatalChart(name, birthDate, birthTime, timezone, province, cit
 }
 
 // ========================================
-// 级联选择器逻辑 (来自 cascader-demo.html)
+// 级联选择器逻辑
 // ========================================
 
 let cityCascaderData = [];
@@ -565,42 +422,6 @@ function confirmCascaderSelection() {
     } else {
         alert('请完整选择省市区');
     }
-}
-
-// ========================================
-// API 调用相关
-// ========================================
-
-/**
- * 生成模拟分析数据（当 API 调用失败时使用）
- */
-function generateMockAnalysis(planets) {
-    const { sun, moon, ascendant, venus, mars, mercury } = planets;
-
-    return {
-        tags: {
-            "太阳": TRAIT_MAP.sun[sun],
-            "月亮": TRAIT_MAP.moon[moon],
-            "上升": TRAIT_MAP.ascendant[ascendant],
-            "金星": TRAIT_MAP.venus[venus],
-            "火星": TRAIT_MAP.mars[mars],
-            "水星": TRAIT_MAP.mercury[mercury]
-        },
-        analysis: {
-            "整体性格特征": `太阳${sun}赋予你${TRAIT_MAP.sun[sun]}的核心性格`,
-            "事业发展": `适合在需要${TRAIT_MAP.sun[sun]}的领域发展`,
-            "爱情婚姻": `金星${venus}让你在爱情中${TRAIT_MAP.venus[venus]}`,
-            "财富潜质": `火星${mars}的行动力带来${TRAIT_MAP.sun[sun]}的财运`,
-            "天赋潜能": `水星${mercury}赋予你${TRAIT_MAP.mercury[mercury]}的智慧`
-        },
-        summary: "星盘昭示无限可能",
-        dailyAdvice: "今日宜保持好心情",
-        jewelry: {
-            name: STONE_MAP.sun[sun],
-            meaning: `增强${TRAIT_MAP.sun[sun]}的能量`,
-            imageHint: STONE_MAP.sun[sun]
-        }
-    };
 }
 
 // ========================================
