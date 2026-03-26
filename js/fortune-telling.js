@@ -572,7 +572,7 @@ function confirmCascaderSelection() {
 // ========================================
 
 /**
- * 调用 SiliconFlow API 获取星盘分析
+ * 调用 Cloudflare Worker 代理获取星盘分析
  */
 async function callSiliconFlowAPI(chartData) {
     const { name, gender, birthDate, birthTime, location, planets } = chartData;
@@ -629,97 +629,63 @@ async function callSiliconFlowAPI(chartData) {
 6. 所有内容需基于提供的星盘信息进行个性化解读。`;
 
     try {
-        // 从本地存储读取 API Key (优先读取 siliconflow_api_key,兼容 deepseek_api_key)
-        let apiKey = localStorage.getItem('siliconflow_api_key');
-        if (!apiKey) {
-            apiKey = localStorage.getItem('deepseek_api_key');
-        }
-
-        // 如果本地存储没有,尝试从 .env 文件读取(通过 fetch)
-        if (!apiKey) {
-            try {
-                const envResponse = await fetch('.env');
-                if (envResponse.ok) {
-                    const envContent = await envResponse.text();
-                    const match = envContent.match(/SILICONFLOW_API_KEY=(.+)/);
-                    if (match && match[1] && match[1] !== 'your_api_key_here') {
-                        apiKey = match[1].trim();
-                        // 保存到 localStorage 以便后续使用
-                        localStorage.setItem('siliconflow_api_key', apiKey);
-                        console.log('从 .env 文件成功读取 API Key');
-                    }
+        // 从 .env 文件读取 Worker URL
+        let workerUrl;
+        try {
+            const envResponse = await fetch('.env');
+            if (envResponse.ok) {
+                const envContent = await envResponse.text();
+                const match = envContent.match(/WORKER_URL=(.+)/);
+                if (match && match[1]) {
+                    workerUrl = match[1].trim();
+                    console.log('从 .env 文件成功读取 Worker URL');
                 }
-            } catch (envError) {
-                console.warn('无法读取 .env 文件:', envError);
             }
+        } catch (envError) {
+            console.warn('无法读取 .env 文件:', envError);
         }
 
-        if (!apiKey) {
-            console.warn('未找到 SiliconFlow API Key');
-            console.warn('请在浏览器控制台执行: localStorage.setItem("siliconflow_api_key", "你的API密钥")');
+        if (!workerUrl || workerUrl === 'https://your-worker.workers.dev') {
+            console.warn('未配置 Worker URL，使用本地模拟数据');
+            console.warn('请在 .env 文件中设置 WORKER_URL');
             return generateMockAnalysis(planets);
         }
 
-        const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
+        // 调用 Worker 代理
+        const response = await fetch(workerUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'deepseek-ai/DeepSeek-V3',
-                messages: [
-                    {
-                        role: 'user',
-                        content: prompt
-                    }
-                ],
-                temperature: 0.7,
-                max_tokens: 500
+                prompt: prompt
             })
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('API 错误响应:', errorText);
-
-            try {
-                const errorData = JSON.parse(errorText);
-                const errorMessage = errorData.error?.message || errorData.message;
-
-                // 特殊处理余额不足的情况
-                if (errorMessage && errorMessage.includes('Insufficient Balance')) {
-                    console.warn('💰 提示: 您的 SiliconFlow 账户余额不足');
-                    console.warn('请访问 https://cloud.siliconflow.cn/ 充值账户');
-                    console.warn('当前将使用本地模拟数据代替 AI 分析');
-                    alert('⚠️ API 余额不足，已自动切换到本地模拟数据模式\n\n请前往 https://cloud.siliconflow.cn/ 充值后获得更精准的 AI 分析');
-                    return generateMockAnalysis(planets);
-                }
-            } catch (e) {
-                console.log('无法解析错误响应');
-            }
-
-            throw new Error(`API 请求失败: ${response.status} - ${errorText}`);
+            console.error('Worker 错误响应:', errorText);
+            throw new Error(`Worker 请求失败: ${response.status}`);
         }
 
         const data = await response.json();
 
-        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-            throw new Error('API 返回数据格式错误');
+        if (!data.result || !data.result.content) {
+            throw new Error('Worker 返回数据格式错误');
         }
 
-        const content = data.choices[0].message.content;
+        const content = data.result.content;
 
         // 解析 JSON 响应
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
             return JSON.parse(jsonMatch[0]);
         } else {
-            throw new Error('无法解析 API 返回的 JSON');
+            throw new Error('无法解析 Worker 返回的 JSON');
         }
     } catch (error) {
-        console.error('DeepSeek API 调用失败:', error);
-        // 如果 API 调用失败，使用本地模拟数据
+        console.error('Worker 调用失败:', error);
+        // 如果 Worker 调用失败，使用本地模拟数据
         return generateMockAnalysis(planets);
     }
 }
