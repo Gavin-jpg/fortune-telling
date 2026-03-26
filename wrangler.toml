@@ -1,0 +1,3 @@
+name = "fortune-telling"           # Worker 名称，可自定义
+main = "fortune-telling.html"                 # Worker 入口文件
+compatibility_date = "2026-03-26"  # 使用当前日期
