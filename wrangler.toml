@@ -1,0 +1,9 @@
+name = "fortune-telling"
+
+[[kv_namespaces]]
+binding = "LIMITS_KV"
+id = "14706b06f36241e8aa4c509964637afa"   # 在控制台KV页面查看
+
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "你的缓存KV命名空间ID"

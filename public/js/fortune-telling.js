@@ -542,6 +542,45 @@ function displayChart(chart, analysisResult) {
 }
 
 // ========================================
+// 悬浮提示功能
+// ========================================
+
+/**
+ * 显示悬浮提示
+ * @param {string} message 提示消息
+ * @param {number} duration 显示时长（毫秒）
+ */
+function showToast(message, duration = 2000) {
+    const toastContainer = document.getElementById('toastContainer');
+    
+    // 创建提示元素
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    
+    // 添加到容器
+    toastContainer.appendChild(toast);
+    
+    // 触发显示动画
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+    
+    // 设置隐藏定时器
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.classList.add('hide');
+        
+        // 动画结束后移除元素
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, duration);
+}
+
+// ========================================
 // 主流程控制
 // ========================================
 
@@ -618,9 +657,26 @@ async function calculateChart() {
         document.getElementById('resultSection').classList.add('show');
     } catch (error) {
         console.error('计算失败:', error);
-        alert('计算失败，请重试');
-        document.getElementById('loading').classList.remove('show');
-        document.getElementById('formSection').style.display = 'block';
+        
+        // 检查是否是限流错误
+        if (error.message && error.message.startsWith('RATE_LIMIT:')) {
+            const rateLimitMessage = error.message.replace('RATE_LIMIT:', '');
+            // 显示2秒的悬浮提示
+            showToast(rateLimitMessage, 2000);
+            
+            // 保持页面状态：隐藏加载动画，显示表单
+            document.getElementById('loading').classList.remove('show');
+            document.getElementById('formSection').style.display = 'block';
+            // 不显示结果区域，保持表单状态
+            document.getElementById('resultSection').classList.remove('show');
+        } else {
+            // 其他错误显示普通提示，并使用模拟数据
+            alert('计算失败，请重试');
+            
+            // 隐藏加载动画，显示结果（使用模拟数据）
+            document.getElementById('loading').classList.remove('show');
+            document.getElementById('resultSection').classList.add('show');
+        }
     }
 }
 
@@ -660,8 +716,20 @@ async function recalculate() {
         document.getElementById('resultSection').classList.add('show');
     } catch (error) {
         console.error('计算失败:', error);
-        alert('计算失败，请重试');
-        document.getElementById('loading').classList.remove('show');
+        
+        // 检查是否是限流错误
+        if (error.message && error.message.startsWith('RATE_LIMIT:')) {
+            const rateLimitMessage = error.message.replace('RATE_LIMIT:', '');
+            // 显示2秒的悬浮提示
+            showToast(rateLimitMessage, 2000);
+            
+            // 保持页面状态：隐藏加载动画，保持结果区域显示
+            document.getElementById('loading').classList.remove('show');
+        } else {
+            // 其他错误显示普通提示
+            alert('计算失败，请重试');
+            document.getElementById('loading').classList.remove('show');
+        }
     }
 }
 

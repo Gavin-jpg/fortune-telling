@@ -189,6 +189,22 @@ async function callSiliconFlowAPI(chartData) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('API 错误响应:', errorText);
+            
+            // 如果是429限流错误，解析错误信息
+            if (response.status === 429) {
+                let errorMessage = '请求过于频繁，请稍后再试';
+                try {
+                    const errorData = JSON.parse(errorText);
+                    if (errorData.error) {
+                        errorMessage = errorData.error;
+                    }
+                } catch (e) {
+                    // 使用默认错误消息
+                }
+                console.error('检测到限流错误，抛出RATE_LIMIT错误');
+                throw new Error(`RATE_LIMIT:${errorMessage}`);
+            }
+            
             throw new Error(`API 请求失败: ${response.status}`);
         }
 
@@ -265,7 +281,12 @@ async function callSiliconFlowAPI(chartData) {
         
         console.error('========================');
         
-        // 如果 API 调用失败，使用本地模拟数据
+        // 如果是限流错误，直接抛出，让前端处理
+        if (error.message && error.message.startsWith('RATE_LIMIT:')) {
+            throw error;
+        }
+        
+        // 其他错误使用本地模拟数据
         return generateMockAnalysis(chartData.planets);
     }
 }
