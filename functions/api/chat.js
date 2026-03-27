@@ -27,6 +27,21 @@ export async function onRequest(context) {
 
   const requestBody = await request.json();
 
+  // 检查缓存
+  const cacheKey = generateCacheKey(requestBody);
+  const cachedResult = await env.CACHE_KV.get(cacheKey, 'json');
+  
+  if (cachedResult) {
+    console.log('缓存命中:', cacheKey);
+    return new Response(JSON.stringify(cachedResult), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'X-Cache': 'HIT'
+      }
+    });
+  }
+
   // 从环境变量获取 API Key（需要在 Cloudflare Dashboard 设置）
   const apiKey = env.SILICONFLOW_API_KEY;
   if (!apiKey) {
@@ -45,14 +60,18 @@ export async function onRequest(context) {
 
   const responseText = await upstreamResponse.text();
 
-  // 异步更新计数器（不阻塞响应）
-  context.waitUntil(updateRateLimitCounters(env, clientIP, limitCheck));
+  // 异步更新计数器和缓存（不阻塞响应）
+  context.waitUntil(Promise.all([
+    updateRateLimitCounters(env, clientIP, limitCheck),
+    cacheResponse(env, cacheKey, responseText)
+  ]));
 
   return new Response(responseText, {
     status: upstreamResponse.status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'X-Cache': 'MISS'
     }
   });
 }
@@ -100,6 +119,44 @@ async function checkRateLimit(env, clientIP) {
   };
 }
 
+// 生成缓存键
+function generateCacheKey(requestBody) {
+  // 从请求体中提取用户信息
+  const messages = requestBody.messages || [];
+  const userMessage = messages.find(msg => msg.role === 'user');
+  
+  if (!userMessage || !userMessage.content) {
+    return 'default_key';
+  }
+
+  // 从用户消息中提取关键信息（性别、出生日期、出生时间、出生地点）
+  const content = userMessage.content;
+  
+  // 提取关键信息
+  const genderMatch = content.match(/性别：(\S+)/);
+  const dateMatch = content.match(/出生日期：(\S+)/);
+  const timeMatch = content.match(/出生时间：(\S+)/);
+  const locationMatch = content.match(/出生地点：(\S+)/);
+  
+  const gender = genderMatch ? genderMatch[1] : '';
+  const birthDate = dateMatch ? dateMatch[1] : '';
+  const birthTime = timeMatch ? timeMatch[1] : '';
+  const location = locationMatch ? locationMatch[1] : '';
+  
+  // 生成哈希键
+  const keyString = `${gender}${birthDate}${birthTime}${location}`;
+  
+  // 使用简单的哈希函数生成固定长度的哈希
+  let hash = 0;
+  for (let i = 0; i < keyString.length; i++) {
+    const char = keyString.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // 转换为32位整数
+  }
+  
+  return `cache:${Math.abs(hash).toString(36)}`;
+}
+
 // 异步更新计数器
 async function updateRateLimitCounters(env, clientIP, limitCheck) {
   if (limitCheck.exceeded) return;
@@ -122,4 +179,30 @@ async function updateRateLimitCounters(env, clientIP, limitCheck) {
       expirationTtl: 172800 
     })
   ]);
+}
+
+// 缓存响应结果
+async function cacheResponse(env, cacheKey, responseText) {
+  try {
+    // 从环境变量获取缓存时间，默认1小时（3600秒）
+    const cacheTtl = parseInt(env.CACHE_TTL) || 3600;
+    
+    // 解析响应内容
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('缓存失败：无法解析响应内容');
+      return;
+    }
+    
+    // 存储到缓存
+    await env.CACHE_KV.put(cacheKey, JSON.stringify(responseData), {
+      expirationTtl: cacheTtl
+    });
+    
+    console.log('缓存写入成功:', cacheKey, 'TTL:', cacheTtl);
+  } catch (error) {
+    console.error('缓存写入失败:', error);
+  }
 }

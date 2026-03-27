@@ -6,4 +6,4 @@ id = "14706b06f36241e8aa4c509964637afa"   # 在控制台KV页面查看
 
 [[kv_namespaces]]
 binding = "CACHE_KV"
-id = "你的缓存KV命名空间ID"
+id = "8ce1ab7f40b546538d8edaeecc6c6e34"
