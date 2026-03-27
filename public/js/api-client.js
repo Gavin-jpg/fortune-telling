@@ -166,7 +166,7 @@ async function callSiliconFlowAPI(chartData) {
 
         // 构建 OpenAI 聊天格式的请求
         const requestBody = {
-            model: "Qwen2.5-7B-Instruct",
+            model: "deepseek-ai/DeepSeek-V3",
             messages: [
                 {
                     role: "user",
@@ -192,24 +192,79 @@ async function callSiliconFlowAPI(chartData) {
             throw new Error(`API 请求失败: ${response.status}`);
         }
 
-        const data = await response.json();
+        const responseText = await response.text();
+        console.log('=== API 响应原始内容 ===');
+        console.log(responseText);
+        console.log('==========================');
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (jsonError) {
+            console.error('=== 响应 JSON 解析错误 ===');
+            console.error('原始响应:', responseText);
+            console.error('JSON 解析错误:', jsonError);
+            console.error('============================');
+            throw new Error('API 返回的 JSON 格式错误');
+        }
 
         // 解析 OpenAI 格式的响应
         if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            console.error('=== API 响应格式错误 ===');
+            console.error('返回的数据结构:', data);
+            console.error('期望的字段: data.choices[0].message');
+            console.error('实际缺少的字段:', {
+                hasChoices: !!data.choices,
+                hasChoices0: !!(data.choices && data.choices[0]),
+                hasMessage: !!(data.choices && data.choices[0] && data.choices[0].message)
+            });
+            console.error('========================');
             throw new Error('API 返回数据格式错误');
         }
 
         const content = data.choices[0].message.content;
-
-        // 解析 JSON 响应
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
-        } else {
-            throw new Error('无法解析 API 返回的 JSON');
+        
+        // 清理和修复可能的 JSON 格式问题
+        let cleanedContent = content.trim();
+        
+        // 修复 "水 星" 中的空格问题
+        cleanedContent = cleanedContent.replace(/"水 星"/g, '"水星"');
+        
+        // 尝试直接解析完整的响应
+        try {
+            return JSON.parse(cleanedContent);
+        } catch (parseError) {
+            console.warn('直接解析失败，尝试提取 JSON:', parseError);
+            
+            // 如果直接解析失败，尝试提取 JSON 部分
+            const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            } else {
+                console.error('API 返回内容:', cleanedContent);
+                throw new Error('无法解析 API 返回的 JSON');
+            }
         }
     } catch (error) {
-        console.error('API 调用失败:', error);
+        console.error('=== API 调用失败详情 ===');
+        console.error('错误位置: callSiliconFlowAPI 函数');
+        console.error('错误类型:', error.name);
+        console.error('错误消息:', error.message);
+        console.error('错误堆栈:', error.stack);
+        console.error('传入的 chartData:', chartData);
+        
+        // 如果是网络错误，显示更多信息
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            console.error('网络连接错误，请检查网络或 API 地址');
+        }
+        
+        // 如果是 JSON 解析错误，显示响应内容
+        if (error.name === 'SyntaxError' && error.message.includes('JSON')) {
+            console.error('JSON 解析错误，检查大模型返回格式');
+        }
+        
+        console.error('========================');
+        
         // 如果 API 调用失败，使用本地模拟数据
         return generateMockAnalysis(chartData.planets);
     }
