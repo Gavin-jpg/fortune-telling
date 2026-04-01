@@ -126,13 +126,19 @@ function generatePrompt(chartData) {
     "imageHint": "用于展示图片的关键词（如\"月光石吊坠\"）"
   }
 }
+
+【首饰名称限制】
+请从以下预定义的首饰名称中选择推荐：
+红宝石、黄水晶、玛瑙、珍珠、太阳石、橄榄石、粉晶、黑曜石、紫水晶、石榴石、海蓝宝、月光石、绿松石、蛋白石、琥珀、翡翠、玫瑰石英、黑玛瑙、青金石、天河石、红玉髓、虎眼石、碧玺、珍珠母、金色石英、绿幽灵、黑金砂、黄玉、黑电气石、拉长石、紫锂辉、珊瑚、粉红碧玺、粉红蛋白石、帝王托帕石、蓝纹玛瑙、摩根石、烟水晶、欧泊、血石、红玛瑙、火欧泊、红碧玺、红纹石、红发晶、托帕石、赤铁矿、锂辉石、紫发晶、星月石、星月石项链、月光石吊坠、紫水晶手链、粉晶项链、黑曜石挂饰
+
 注意：
 1. 每个星座标签必须是3-5个字，生动贴切。
 2. 整体分析每点50字以内，五个维度共计约250字。
 3. summary 控制在15-20字，要有活人感，像朋友聊天一样自然，可用网络热梗（如"摆烂"、"躺平"、"emo"、"yyds"、"破防"等），语气要接地气，不要太官方。
 4. dailyAdvice 15字左右，简洁实用，使用"宜/忌/适合/不宜"等格式。
 5. jewelry.meaning 约15字。
-6. 所有内容需基于提供的星盘信息进行个性化解读。`;
+6. jewelry.name 必须严格从上述预定义列表中选择，确保名称完全匹配。
+7. 所有内容需基于提供的星盘信息进行个性化解读。`;
 }
 
 /**
@@ -150,32 +156,37 @@ function getApiConfig() {
 /**
  * 调用 Cloudflare Pages Functions 获取星盘分析
  */
-async function callSiliconFlowAPI(chartData) {
-    try {
-        // 获取配置
-        const config = getApiConfig();
-        let apiUrl = config.API_URL;
+async function callSiliconFlowAPI(chartData, options = {}) {
+  try {
+    // 获取配置
+    const config = getApiConfig();
+    let apiUrl = config.API_URL;
 
-        if (!apiUrl || apiUrl === 'https://your-app.pages.dev') {
-            console.warn('未配置 API_URL，使用本地模拟数据');
-            console.warn('请在 api-client.js 中设置实际的 API_URL');
-            return generateMockAnalysis(chartData.planets);
+    if (!apiUrl || apiUrl === 'https://your-app.pages.dev') {
+      console.warn('未配置 API_URL，使用本地模拟数据');
+      console.warn('请在 api-client.js 中设置实际的 API_URL');
+      return generateMockAnalysis(chartData.planets);
+    }
+
+    const prompt = generatePrompt(chartData);
+
+    // 构建 OpenAI 聊天格式的请求
+    const requestBody = {
+      model: "deepseek-ai/DeepSeek-V3",
+      messages: [
+        {
+          role: "user",
+          content: prompt
         }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000
+    };
 
-        const prompt = generatePrompt(chartData);
-
-        // 构建 OpenAI 聊天格式的请求
-        const requestBody = {
-            model: "deepseek-ai/DeepSeek-V3",
-            messages: [
-                {
-                    role: "user",
-                    content: prompt
-                }
-            ],
-            temperature: 0.7,
-            max_tokens: 1000
-        };
+    // 添加跳过缓存选项
+    if (options.skipCache) {
+      requestBody.skipCache = true;
+    }
 
         // 调用 Pages Functions
         const response = await fetch(apiUrl, {

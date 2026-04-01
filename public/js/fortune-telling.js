@@ -539,6 +539,9 @@ function displayChart(chart, analysisResult) {
     document.getElementById('analysisMarriage').textContent = analysisResult.analysis['爱情婚姻'];
     document.getElementById('analysisWealth').textContent = analysisResult.analysis['财富潜质'];
     document.getElementById('analysisTalent').textContent = analysisResult.analysis['天赋潜能'];
+    
+    // 初始化星盘卡片点击事件
+    initChartCardClickEvents();
 }
 
 // ========================================
@@ -699,14 +702,14 @@ async function recalculate() {
         // 计算星盘
         const chart = calculateNatalChart(name, birthDate, birthTime, timezone, province, city, district);
 
-        // 调用 SiliconFlow API 获取分析结果
+        // 调用 SiliconFlow API 获取分析结果（跳过缓存）
         const chartWithGender = {
             ...chart,
             gender: gender === 'male' ? '男' : '女',
             birthDate: birthDate,
             birthTime: birthTime
         };
-        const analysisResult = await callSiliconFlowAPI(chartWithGender);
+        const analysisResult = await callSiliconFlowAPI(chartWithGender, { skipCache: true });
 
         // 显示结果
         displayChart(chart, analysisResult);
@@ -743,6 +746,18 @@ function resetForm() {
     // 切换显示
     document.getElementById('resultSection').classList.remove('show');
     document.getElementById('formSection').style.display = 'block';
+}
+
+// ========================================
+// 星盘卡片点击事件处理
+// ========================================
+
+/**
+ * 初始化星盘卡片点击事件（旧版本，已弃用）
+ */
+function initChartCardClickEventsOld() {
+    // 此函数已弃用，使用新的 initChartCardClickEvents()
+    console.warn('initChartCardClickEventsOld() 已弃用，请使用新的实现');
 }
 
 // ========================================
@@ -795,3 +810,287 @@ document.addEventListener('DOMContentLoaded', function() {
         clickOpens: true
     });
 });
+
+// ========================================
+// TDesign Popup 组件功能
+// ========================================
+
+/**
+ * 初始化星盘卡片点击事件
+ */
+function initChartCardClickEvents() {
+    const chartCards = document.querySelectorAll('.chart-card');
+    
+    chartCards.forEach((card) => {
+        // 所有星盘卡片都使用气泡框
+        initBubbleTooltip(card);
+    });
+}
+
+/**
+ * 初始化气泡框（所有星盘卡片使用）
+ */
+function initBubbleTooltip(card) {
+    // 点击显示/隐藏tooltip
+    card.addEventListener('click', function(event) {
+        // 阻止事件冒泡，避免立即触发document的点击事件
+        event.stopPropagation();
+        
+        if (window.currentBubble && window.bubbleVisible) {
+            // 如果气泡框已显示，则隐藏
+            window.bubbleVisible = false;
+            hideBubbleTooltip();
+        } else {
+            // 如果气泡框未显示，则显示
+            window.bubbleVisible = true;
+            showBubbleTooltip(this);
+        }
+    });
+    
+    // 点击其他地方隐藏tooltip
+    document.addEventListener('click', function(event) {
+        if (window.bubbleVisible && !card.contains(event.target) && 
+            !(window.currentBubble && window.currentBubble.contains(event.target))) {
+            window.bubbleVisible = false;
+            hideBubbleTooltip();
+        }
+    });
+}
+
+
+
+/**
+ * 从D1数据库获取星体+星座组合解释数据
+ */
+async function getPlanetZodiacInterpretationFromDB(planet, zodiac) {
+    try {
+        const response = await fetch(`/api/zodiac?planet=${encodeURIComponent(planet)}&zodiac=${encodeURIComponent(zodiac)}`);
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                // 未找到数据，返回null
+                return null;
+            }
+            throw new Error('数据库查询失败');
+        }
+        
+        const data = await response.json();
+        
+        // 检查是否有错误信息
+        if (data.error) {
+            console.warn(`未找到 ${planet}+${zodiac} 组合的数据:`, data.error);
+            return null;
+        }
+        
+        return data;
+    } catch (error) {
+        console.error(`获取 ${planet}+${zodiac} 组合数据失败:`, error);
+        return null;
+    }
+}
+
+/**
+ * 格式化文本，将关键词替换为红色加重字体，并将\n解析为换行符
+ */
+function formatInterpretation(interpretation, keywords) {
+    if (!interpretation) return '';
+    
+    // 先将 \n 替换为HTML的换行标签<br>
+    let formattedText = interpretation.replace(/\\n/g, '<br>');
+    
+    // 在正文开头添加两个全角空格
+    formattedText = '  ' + formattedText;
+    
+    // 在每个换行后添加缩进
+    formattedText = formattedText.replace(/<br>/g, '<br>  ');
+    
+    if (!keywords) return formattedText;
+    
+    const keywordList = keywords.split(';');
+    
+    keywordList.forEach((keyword, index) => {
+        const placeholder = '%s'; // 使用 %s 作为占位符
+        const coloredKeyword = `<span class="keyword-highlight">${keyword}</span>`;
+        // 只替换第一个出现的 %s
+        formattedText = formattedText.replace(placeholder, coloredKeyword);
+    });
+    
+    return formattedText;
+}
+
+/**
+ * 显示气泡框
+ */
+async function showBubbleTooltip(triggerElement) {
+    // 先隐藏可能存在的tooltip
+    hideBubbleTooltip();
+    
+    // 获取卡片中的信息
+    const planetZodiacName = triggerElement.querySelector('.planet-zodiac-name').textContent;
+    const trait = triggerElement.querySelector('.trait').textContent;
+    const icon = triggerElement.querySelector('.icon').textContent;
+    
+    // 从行星名称中提取行星和星座信息
+    const planetMap = {
+        '太阳': { en: 'sun', cn: '太阳' },
+        '月亮': { en: 'moon', cn: '月亮' },
+        '上升': { en: 'ascendant', cn: '上升' },
+        '金星': { en: 'venus', cn: '金星' },
+        '火星': { en: 'mars', cn: '火星' },
+        '水星': { en: 'mercury', cn: '水星' }
+    };
+    
+    let planet = '';
+    let planetCN = '';
+    let zodiac = '';
+    
+    // 解析行星和星座名称（格式如："太阳射手"）
+    for (const [cnName, planetInfo] of Object.entries(planetMap)) {
+        if (planetZodiacName.startsWith(cnName)) {
+            planet = planetInfo.en;
+            planetCN = planetInfo.cn;
+            zodiac = planetZodiacName.replace(cnName, '');
+            break;
+        }
+    }
+    
+    if (!planet || !zodiac) {
+        console.error('无法解析行星和星座信息:', planetZodiacName);
+        return;
+    }
+    
+    // 从数据库获取星体+星座组合数据，使用中文星体名称
+    const dbData = await getPlanetZodiacInterpretationFromDB(planetCN, zodiac);
+    
+    let titleText;
+    let descriptionContent;
+    
+    if (dbData) {
+        // 如果有数据库数据，使用数据库的title字段作为标题
+        titleText = dbData.title;
+        descriptionContent = formatInterpretation(dbData.interpretation, dbData.keyWord);
+    } else {
+        // 如果没有数据，显示"暂无数据"
+        titleText = trait; // 无数据时使用卡片中的trait作为标题
+        descriptionContent = `
+            <div style="text-align: center; padding: 20px; color: #9c7fff;">
+                <p style="font-size: 1.2em; margin-bottom: 10px;">📊 暂无数据</p>
+                <p style="color: #c7b9ff; font-size: 0.9em;">
+                    当前星体+星座组合（${planetCN} + ${zodiac}）的详细解释数据正在整理中...
+                </p>
+            </div>
+        `;
+    }
+    
+    // 创建气泡框元素
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble-tooltip';
+    bubble.innerHTML = `
+        <div class="bubble-content">
+            <div class="bubble-header">
+                <div class="bubble-icon">${icon}</div>
+                <div class="bubble-title no-border">${planetCN}</div>
+            </div>
+            <div class="title-quote no-border">"${titleText}"</div>
+            <div class="bubble-description">${descriptionContent}</div>
+            <div class="bubble-arrow"></div>
+        </div>
+    `;
+    
+    // 添加到页面
+    document.body.appendChild(bubble);
+    
+    // 定位气泡框
+    positionBubble(bubble, triggerElement);
+    
+    // 显示动画
+    setTimeout(() => {
+        bubble.classList.add('active');
+    }, 10);
+    
+    // 保存引用
+    window.currentBubble = bubble;
+    window.bubbleVisible = true;
+}
+
+/**
+ * 隐藏气泡框
+ */
+function hideBubbleTooltip() {
+    if (window.currentBubble) {
+        window.currentBubble.classList.remove('active');
+        setTimeout(() => {
+            if (window.currentBubble && window.currentBubble.parentNode) {
+                window.currentBubble.parentNode.removeChild(window.currentBubble);
+            }
+            window.currentBubble = null;
+        }, 300);
+    }
+}
+
+/**
+ * 定位气泡框
+ */
+function positionBubble(bubble, triggerElement) {
+    const rect = triggerElement.getBoundingClientRect();
+    const bubbleRect = bubble.getBoundingClientRect();
+    
+    // 计算位置（在元素右侧显示）
+    const top = rect.top + (rect.height / 2) - (bubbleRect.height / 2);
+    const left = rect.right + 10;
+    
+    // 应用位置
+    bubble.style.top = `${Math.max(10, top)}px`;
+    bubble.style.left = `${Math.min(window.innerWidth - bubbleRect.width - 10, left)}px`;
+    
+    // 更新箭头位置为左侧
+    const arrow = bubble.querySelector('.bubble-arrow');
+    if (arrow) {
+        arrow.style.left = '-8px';
+        arrow.style.top = '50%';
+        arrow.style.transform = 'translateY(-50%)';
+        arrow.style.borderLeft = '8px solid rgba(60, 40, 100, 0.95)';
+        arrow.style.borderTop = '8px solid transparent';
+        arrow.style.borderBottom = '8px solid transparent';
+        arrow.style.borderRight = 'none';
+    }
+}
+
+/**
+ * 获取气泡框描述内容
+ */
+function getBubbleDescription(zodiac) {
+    const zodiacDescriptions = {
+        '白羊座': '热情勇敢，充满活力，喜欢挑战和冒险，具有领导才能。',
+        '金牛座': '稳重务实，追求稳定，注重物质享受，具有艺术天赋。',
+        '双子座': '机智灵活，好奇心强，善于沟通，思维敏捷。',
+        '巨蟹座': '情感丰富，家庭观念强，保护欲强，具有同理心。',
+        '狮子座': '自信大方，表现欲强，具有领导气质，追求荣誉。',
+        '处女座': '细心谨慎，追求完美，分析能力强，注重细节。',
+        '天秤座': '优雅和谐，注重平衡，善于交际，具有艺术鉴赏力。',
+        '天蝎座': '深沉神秘，洞察力强，意志坚定，情感深度强。',
+        '射手座': '乐观开朗，热爱自由，追求真理，具有冒险精神。',
+        '摩羯座': '务实稳重，目标明确，责任感强，具有组织能力。',
+        '水瓶座': '独立创新，思想前卫，注重友情，具有人道主义精神。',
+        '双鱼座': '感性浪漫，富有同情心，想象力丰富，具有艺术天赋。'
+    };
+    
+    return zodiacDescriptions[zodiac] || '上升星座代表你给别人的第一印象和外在形象。';
+}
+
+
+
+/**
+ * 获取行星名称
+ */
+function getPlanetName(planet) {
+    const planetNames = {
+        sun: '太阳星座',
+        moon: '月亮星座',
+        ascendant: '上升星座',
+        venus: '金星星座',
+        mars: '火星星座',
+        mercury: '水星星座'
+    };
+    return planetNames[planet] || '星盘科普';
+}

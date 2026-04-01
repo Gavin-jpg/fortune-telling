@@ -7,3 +7,8 @@ id = "14706b06f36241e8aa4c509964637afa"   # 在控制台KV页面查看
 [[kv_namespaces]]
 binding = "CACHE_KV"
 id = "8ce1ab7f40b546538d8edaeecc6c6e34"
+
+[[d1_databases]]
+binding = "DB"  # 代码中用 env.DB 访问
+database_name = "fortune-db"
+database_id = "ca84d95d-e2bd-40e2-9f5c-e68ed04c5292"

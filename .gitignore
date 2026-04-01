@@ -1,2 +1,6 @@
 .dev.vars
 .wrangler/
+111.sql
+.env
+CODEBUDDY.md
+wrangler.toml

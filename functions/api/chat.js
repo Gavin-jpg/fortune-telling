@@ -27,19 +27,27 @@ export async function onRequest(context) {
 
   const requestBody = await request.json();
 
-  // 检查缓存
+  // 检查是否跳过缓存（从请求头或请求体中获取）
+  const skipCache = request.headers.get('X-Skip-Cache') === 'true' || 
+                   (requestBody.skipCache === true);
+
+  // 生成缓存键（无论是否跳过缓存都需要）
   const cacheKey = generateCacheKey(requestBody);
-  const cachedResult = await env.CACHE_KV.get(cacheKey, 'json');
-  
-  if (cachedResult) {
-    console.log('缓存命中:', cacheKey);
-    return new Response(JSON.stringify(cachedResult), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'X-Cache': 'HIT'
-      }
-    });
+
+  // 检查缓存（除非明确跳过）
+  if (!skipCache) {
+    const cachedResult = await env.CACHE_KV.get(cacheKey, 'json');
+    
+    if (cachedResult) {
+      console.log('缓存命中:', cacheKey);
+      return new Response(JSON.stringify(cachedResult), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'X-Cache': 'HIT'
+        }
+      });
+    }
   }
 
   // 从环境变量获取 API Key（需要在 Cloudflare Dashboard 设置）
@@ -48,17 +56,48 @@ export async function onRequest(context) {
     return new Response('Server configuration error', { status: 500 });
   }
 
-  // 调用 SiliconFlow API
-  const upstreamResponse = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(requestBody)
-  });
+  // 检查是否启用大模型调用
+  const aiEnabled = env.AI_API_ENABLED === 'true' || env.AI_API_ENABLED === true;
+  
+  let responseText;
+  let responseStatus = 200; // 默认状态码
+  
+  if (aiEnabled) {
+    // 调用 SiliconFlow API
+    const upstreamResponse = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
 
-  const responseText = await upstreamResponse.text();
+    responseText = await upstreamResponse.text();
+    responseStatus = upstreamResponse.status;
+  } else {
+    // 模拟返回结果（用于本地测试）
+    responseText = JSON.stringify({
+      id: "chatcmpl-local-test",
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model: "deepseek-ai/DeepSeek-V3",
+      choices: [{
+        index: 0,
+        message: {
+          role: "assistant",
+          content: "这是本地测试模式返回的模拟结果。当 AI_API_ENABLED=false 时，不会调用真实的大模型 API。"
+        },
+        finish_reason: "stop"
+      }],
+      usage: {
+        prompt_tokens: 100,
+        completion_tokens: 50,
+        total_tokens: 150
+      }
+    });
+    responseStatus = 200;
+  }
 
   // 异步更新计数器和缓存（不阻塞响应）
   context.waitUntil(Promise.all([
@@ -67,7 +106,7 @@ export async function onRequest(context) {
   ]));
 
   return new Response(responseText, {
-    status: upstreamResponse.status,
+    status: responseStatus,
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
